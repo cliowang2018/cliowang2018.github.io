@@ -12,14 +12,13 @@
 ════════════════════════════════════════════════ -->
 <script>
   const FIREBASE_CONFIG = {
-    apiKey:            "YOUR_API_KEY",
-    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId:         "YOUR_PROJECT_ID",
-    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId:             "YOUR_APP_ID"
+    apiKey:            "AIzaSyAwQKdwcAbOMs7cM2Rre45YGU9JqAPUfZU",
+    authDomain:        "swim-clio.firebaseapp.com",
+    projectId:         "swim-clio",
+    storageBucket:     "swim-clio.firebasestorage.app",
+    messagingSenderId: "475146517958",
+    appId:             "1:475146517958:web:6759759ca9999767b4c6c7"
   };
-  // ↑ 替换完成后保存文件，重新上传到 GitHub 即可
 </script>
 
 <style>
@@ -221,7 +220,7 @@
 <body>
 
 <!-- SETUP OVERLAY -->
-<div id="setupOverlay">
+<div id="setupOverlay" class="hidden">
   <div class="setup-box">
     <h2>🏊‍♀️ 欢迎使用游泳成长记录</h2>
     <p>首次使用需要连接云端数据库，请按以下步骤获取 Firebase 配置参数，填写后数据将自动同步到云端，换手机也不会丢失。</p>
@@ -977,21 +976,8 @@ function init() {
   const today = new Date().toISOString().split('T')[0];
   ['tDate','rDate','gDate'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
 
-  // Try saved Firebase config first
-  const saved = localStorage.getItem('swim_fbcfg');
-  if (saved) {
-    try {
-      const cfg = JSON.parse(saved);
-      const ok = tryInitFirebase(cfg);
-      if (ok) { document.getElementById('setupOverlay').classList.add('hidden'); return; }
-    } catch(e) {}
-  }
-  // Check if inline config was set
-  if (FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY') {
-    const ok = tryInitFirebase(FIREBASE_CONFIG);
-    if (ok) { document.getElementById('setupOverlay').classList.add('hidden'); return; }
-  }
-  // Show setup overlay
+  // 直接使用内置 Firebase 配置，无需任何用户操作
+  tryInitFirebase(FIREBASE_CONFIG);
   refreshHeader();
   renderDashboard();
 }
