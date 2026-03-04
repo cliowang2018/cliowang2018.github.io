@@ -277,7 +277,7 @@
       <div class="stat-card"><div class="stat-value" id="statTotalTraining">—</div><div class="stat-label">训练次数</div></div>
       <div class="stat-card wave"><div class="stat-value" id="statTotalRaces">—</div><div class="stat-label">比赛场次</div></div>
       <div class="stat-card gold"><div class="stat-value" id="statPBCount">—</div><div class="stat-label">个人最佳 PBs</div></div>
-      <div class="stat-card coral"><div class="stat-value" id="statAge">7</div><div class="stat-label">训练年龄</div></div>
+      <div class="stat-card coral"><div class="stat-value" id="statAge">7</div><div class="stat-label">年龄</div></div>
     </div>
     <div class="card">
       <div class="card-header"><div class="card-title"><span>🏆</span>最近比赛成绩</div></div>
@@ -477,7 +477,7 @@ let db = null;
 let useCloud = false;
 let localMode = false;
 
-let settings = { name:'小游泳健将', birthday:'', team:'', coach:'', weeklyTarget:5, primaryStroke:'自由泳', group:'', goalEvent:'', emoji:'🏊‍♀️' };
+let settings = { name:'汪得尔', birthday:'', team:'', coach:'', weeklyTarget:5, primaryStroke:'自由泳', group:'', goalEvent:'', emoji:'🏊‍♀️' };
 let trainings = [];
 let races = [];
 let skillRecords = [];
@@ -494,7 +494,7 @@ function tryInitFirebase(cfg) {
     const app = initializeApp(cfg);
     db = getFirestore(app);
     useCloud = true;
-    setSyncStatus('ok', '☁️ 云端已连接');
+    setSyncStatus('ok', '☁️ 云连接');
     document.getElementById('cloudStatusInfo').textContent = `✅ 已连接 Firebase 项目：${cfg.projectId}，数据实时同步到云端。`;
     document.getElementById('syncStatus').className = 'ok';
     subscribeAll();
