@@ -277,7 +277,7 @@
       <div class="stat-card"><div class="stat-value" id="statTotalTraining">—</div><div class="stat-label">训练次数</div></div>
       <div class="stat-card wave"><div class="stat-value" id="statTotalRaces">—</div><div class="stat-label">比赛场次</div></div>
       <div class="stat-card gold"><div class="stat-value" id="statPBCount">—</div><div class="stat-label">个人最佳 PBs</div></div>
-      <div class="stat-card coral"><div class="stat-value" id="statAge">7</div><div class="stat-label">年龄</div></div>
+      <div class="stat-card coral"><div class="stat-value" id="statAge">7</div><div class="stat-label">训练年龄</div></div>
     </div>
     <div class="card">
       <div class="card-header"><div class="card-title"><span>🏆</span>最近比赛成绩</div></div>
@@ -296,6 +296,7 @@
       <div class="form-grid">
         <div class="form-group"><label>日期 Date</label><input type="date" id="tDate"></div>
         <div class="form-group"><label>泳池 Pool</label><select id="tPool"><option value="25m">25米池</option><option value="50m">50米池</option></select></div>
+        <div class="form-group"><label>游泳场馆 Venue</label><input type="text" id="tVenue" placeholder="例：国家游泳中心、XX区体育馆"></div>
         <div class="form-group"><label>时长(分钟) Duration</label><input type="number" id="tDuration" placeholder="60" min="10"></div>
         <div class="form-group"><label>距离(米) Distance</label><input type="number" id="tDistance" placeholder="1000"></div>
         <div class="form-group"><label>训练重点 Focus</label>
@@ -325,8 +326,8 @@
       <div class="card-header"><div class="card-title"><span>📋</span>训练记录</div></div>
       <div style="overflow-x:auto">
         <table class="data-table">
-          <thead><tr><th>日期</th><th>泳池</th><th>时长</th><th>距离</th><th>重点</th><th>评价</th><th>备注</th><th></th></tr></thead>
-          <tbody id="trainingTable"><tr><td colspan="8" class="empty-state">加载中…</td></tr></tbody>
+          <thead><tr><th>日期</th><th>泳池</th><th>场馆</th><th>时长</th><th>距离</th><th>重点</th><th>评价</th><th>备注</th><th></th></tr></thead>
+          <tbody id="trainingTable"><tr><td colspan="9" class="empty-state">加载中…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -354,6 +355,7 @@
         <div class="form-group"><label>成绩 (mm:ss.ms)</label><input type="text" id="rTime" placeholder="1:23.45"></div>
         <div class="form-group"><label>名次</label><input type="number" id="rPlace" placeholder="1" min="1"></div>
         <div class="form-group"><label>泳池</label><select id="rPool"><option value="25m">25米池</option><option value="50m">50米池</option></select></div>
+        <div class="form-group"><label>游泳场馆 Venue</label><input type="text" id="rVenue" placeholder="例：国家游泳中心、XX区体育馆"></div>
         <div class="form-group"><label>个人最佳？</label><select id="rPB"><option value="false">否 No</option><option value="true">是 Yes 🎉</option></select></div>
       </div>
       <div class="form-group" style="margin-top:14px"><label>感想/教练点评</label><textarea id="rNotes" placeholder="出发很好，转身继续练…"></textarea></div>
@@ -363,8 +365,8 @@
       <div class="card-header"><div class="card-title"><span>📊</span>比赛记录</div></div>
       <div style="overflow-x:auto">
         <table class="data-table">
-          <thead><tr><th>日期</th><th>比赛</th><th>项目</th><th>成绩</th><th>名次</th><th>泳池</th><th>备注</th><th></th></tr></thead>
-          <tbody id="raceTable"><tr><td colspan="8" class="empty-state">加载中…</td></tr></tbody>
+          <thead><tr><th>日期</th><th>比赛</th><th>项目</th><th>成绩</th><th>名次</th><th>泳池</th><th>场馆</th><th>备注</th><th></th></tr></thead>
+          <tbody id="raceTable"><tr><td colspan="9" class="empty-state">加载中…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -477,7 +479,7 @@ let db = null;
 let useCloud = false;
 let localMode = false;
 
-let settings = { name:'汪得尔', birthday:'', team:'', coach:'', weeklyTarget:5, primaryStroke:'自由泳', group:'', goalEvent:'', emoji:'🏊‍♀️' };
+let settings = { name:'小游泳健将', birthday:'', team:'', coach:'', weeklyTarget:5, primaryStroke:'自由泳', group:'', goalEvent:'', emoji:'🏊‍♀️' };
 let trainings = [];
 let races = [];
 let skillRecords = [];
@@ -494,7 +496,7 @@ function tryInitFirebase(cfg) {
     const app = initializeApp(cfg);
     db = getFirestore(app);
     useCloud = true;
-    setSyncStatus('ok', '☁️ 云连接');
+    setSyncStatus('ok', '☁️ 云端已连接');
     document.getElementById('cloudStatusInfo').textContent = `✅ 已连接 Firebase 项目：${cfg.projectId}，数据实时同步到云端。`;
     document.getElementById('syncStatus').className = 'ok';
     subscribeAll();
@@ -726,6 +728,7 @@ window.addTraining = async function() {
   if (!d||!dur) { showToast('⚠️ 请填写日期和时长'); return; }
   const rec = {
     date:d, pool:document.getElementById('tPool').value,
+    venue:document.getElementById('tVenue').value,
     duration:+dur, distance:+document.getElementById('tDistance').value||0,
     focus:document.getElementById('tFocus').value, rating:+document.getElementById('tRating').value,
     notes:document.getElementById('tNotes').value, createdAt: Date.now()
@@ -734,7 +737,7 @@ window.addTraining = async function() {
   if (useCloud) { await cloudSet('trainings', id, rec); }
   else { trainings.unshift({id,...rec}); saveLocal(); renderTrainingTable(); renderDashboard(); }
   showToast('✅ 训练记录已保存！');
-  ['tDate','tDuration','tDistance','tNotes'].forEach(x=>document.getElementById(x).value='');
+  ['tDate','tDuration','tDistance','tNotes','tVenue'].forEach(x=>document.getElementById(x).value='');
 };
 
 window.deleteTraining = async function(id) {
@@ -747,7 +750,7 @@ function renderTrainingTable() {
   const tbody = document.getElementById('trainingTable');
   if (!trainings.length) { tbody.innerHTML='<tr><td colspan="8" class="empty-state">暂无训练记录</td></tr>'; return; }
   tbody.innerHTML = trainings.map(t=>`<tr>
-    <td>${t.date}</td><td>${t.pool}</td><td>${t.duration}分钟</td>
+    <td>${t.date}</td><td>${t.pool}</td><td style="font-size:12px">${t.venue||'—'}</td><td>${t.duration}分钟</td>
     <td>${t.distance?t.distance+'m':'—'}</td><td>${strokeBadge(t.focus)}</td>
     <td>${stars(t.rating)}</td><td style="max-width:120px;font-size:12px">${t.notes||'—'}</td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteTraining('${t.id}')">🗑️</button></td>
@@ -765,6 +768,7 @@ window.addRace = async function() {
     distance:document.getElementById('rDist').value, time,
     place:+document.getElementById('rPlace').value||null,
     pool:document.getElementById('rPool').value,
+    venue:document.getElementById('rVenue').value,
     pb:document.getElementById('rPB').value==='true',
     notes:document.getElementById('rNotes').value, createdAt:Date.now()
   };
@@ -772,7 +776,7 @@ window.addRace = async function() {
   if (useCloud) { await cloudSet('races', id, rec); }
   else { races.unshift({id,...rec}); saveLocal(); renderRaceTable(); renderDashboard(); }
   showToast('🏅 比赛成绩已保存！');
-  ['rDate','rName','rTime','rPlace','rNotes'].forEach(x=>document.getElementById(x).value='');
+  ['rDate','rName','rTime','rPlace','rNotes','rVenue'].forEach(x=>document.getElementById(x).value='');
 };
 
 window.deleteRace = async function(id) {
@@ -789,6 +793,7 @@ function renderRaceTable() {
     <td>${strokeBadge(r.stroke)} ${r.distance}</td>
     <td><strong>${r.time}</strong>${r.pb?`<span class="pb-badge">PB</span>`:''}</td>
     <td>${placeBadge(r.place)}</td><td>${r.pool}</td>
+    <td style="font-size:12px">${r.venue||'—'}</td>
     <td style="max-width:120px;font-size:12px">${r.notes||'—'}</td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteRace('${r.id}')">🗑️</button></td>
   </tr>`).join('');
