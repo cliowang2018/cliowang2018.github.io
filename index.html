@@ -512,13 +512,13 @@ function tryInitFirebase(cfg) {
     const app = initializeApp(cfg);
     db = getFirestore(app);
     useCloud = true;
-    setSyncStatus('ok', '☁️ 云端已连接');
-    document.getElementById('cloudStatusInfo').textContent = `✅ 已连接 Firebase 项目：${cfg.projectId}，数据实时同步到云端。`;
-    document.getElementById('syncStatus').className = 'ok';
+    // 不立刻显示ok，先显示"连接中"，等第一个onSnapshot回调确认后才改绿
+    setSyncStatus('syncing', '⏳ 连接中…');
     subscribeAll();
     return true;
   } catch(e) {
     console.error('Firebase init error:', e);
+    setSyncStatus('err', '❌ 连接失败');
     return false;
   }
 }
@@ -573,35 +573,53 @@ function saveLocal() {
 //  FIRESTORE REALTIME LISTENERS
 // ══════════════════════════════════════════
 function subscribeAll() {
-  // settings doc
-  onSnapshot(doc(db, 'swim', 'settings'), snap => {
-    if (snap.exists()) { settings = { ...settings, ...snap.data() }; refreshHeader(); loadSettingsForm(); }
-  });
+  let confirmed = false;
+  function onConnected() {
+    if (!confirmed) {
+      confirmed = true;
+      setSyncStatus('ok', '☁️ 云端已连接');
+      document.getElementById('cloudStatusInfo').textContent = `✅ 已连接 Firebase 项目：swim-clio，数据实时同步到云端。`;
+    }
+  }
+  function onError(e) {
+    setSyncStatus('err', '❌ 连接失败');
+    document.getElementById('cloudStatusInfo').textContent = `❌ Firestore 连接失败：${e.message}。请检查 Firebase 控制台的 Rules 是否已设为开放。`;
+    console.error('Firestore error:', e);
+  }
+
+  // settings doc — 用这个做连接探针
+  onSnapshot(doc(db, 'swim', 'settings'),
+    snap => { onConnected(); if (snap.exists()) { settings = { ...settings, ...snap.data() }; refreshHeader(); loadSettingsForm(); } },
+    e => onError(e)
+  );
   // manualGoals
-  onSnapshot(doc(db, 'swim', 'manualGoals'), snap => {
-    if (snap.exists() && snap.data().goals) { manualGoals = snap.data().goals; }
-  });
+  onSnapshot(doc(db, 'swim', 'manualGoals'),
+    snap => { if (snap.exists() && snap.data().goals) { manualGoals = snap.data().goals; } },
+    e => console.warn('manualGoals listener error:', e)
+  );
   // trainings
-  onSnapshot(collection(db, 'trainings'), snap => {
-    trainings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    trainings.sort((a,b) => b.date.localeCompare(a.date));
-    renderTrainingTable();
-    renderDashboard();
-  });
+  onSnapshot(collection(db, 'trainings'),
+    snap => { trainings = snap.docs.map(d => ({ id: d.id, ...d.data() })); trainings.sort((a,b) => b.date.localeCompare(a.date)); renderTrainingTable(); renderDashboard(); },
+    e => console.warn('trainings listener error:', e)
+  );
   // races
-  onSnapshot(collection(db, 'races'), snap => {
-    races = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    races.sort((a,b) => b.date.localeCompare(a.date));
-    renderRaceTable();
-    renderDashboard();
-  });
+  onSnapshot(collection(db, 'races'),
+    snap => { races = snap.docs.map(d => ({ id: d.id, ...d.data() })); races.sort((a,b) => b.date.localeCompare(a.date)); renderRaceTable(); renderDashboard(); },
+    e => console.warn('races listener error:', e)
+  );
   // growthRecords
-  onSnapshot(collection(db, 'growthRecords'), snap => {
-    growthRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    growthRecords.sort((a,b) => a.date.localeCompare(b.date));
-    renderGrowthTable();
-    renderGrowthChart();
-  });
+  onSnapshot(collection(db, 'growthRecords'),
+    snap => { growthRecords = snap.docs.map(d => ({ id: d.id, ...d.data() })); growthRecords.sort((a,b) => a.date.localeCompare(b.date)); renderGrowthTable(); renderGrowthChart(); },
+    e => console.warn('growthRecords listener error:', e)
+  );
+
+  // 10秒超时：若还没连上，提示检查Rules
+  setTimeout(() => {
+    if (!confirmed) {
+      setSyncStatus('err', '⚠️ 连接超时');
+      document.getElementById('cloudStatusInfo').textContent = '⚠️ Firebase 连接超时。最常见原因：Firestore Rules 未设为开放。请前往 Firebase 控制台 → Firestore → Rules，确认规则允许 read/write。';
+    }
+  }, 10000);
 }
 
 // ══════════════════════════════════════════
